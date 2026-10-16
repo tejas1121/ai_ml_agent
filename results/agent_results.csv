@@ -1,0 +1,3 @@
+dataset,method,mode,seed,best_cv_auc,test_auc,iterations_used,llm_calls,prompt_tokens,completion_tokens,wall_seconds,compute_seconds,n_cached_calls,n_invalid,n_timeout,n_memory,n_error,stop_reason,model
+credit-g,plain,live,0,0.7434151785714286,0.825952380952381,1,3,2433,514,151.55848899998819,147.58546489995206,0,0,0,0,3,max_repairs,qwen2.5-coder:7b
+diabetes,plain,live,0,0.8175941306755259,0.8788888888888889,6,6,3948,404,147.72510159999365,141.8115193999838,0,0,0,0,0,max_iterations,qwen2.5-coder:7b

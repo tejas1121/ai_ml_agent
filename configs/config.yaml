@@ -1,0 +1,37 @@
+seeds:
+  - 0
+  - 1
+  - 2
+
+datasets:
+  - credit-g
+  - credit-approval
+  - diabetes
+  - blood-transfusion-service-center
+  - ilpd
+  - wdbc
+  - kc1
+  - phoneme
+
+openml_suite_id: 99
+n_jobs: 6
+test_size: 0.2
+cv_folds: 5
+llm:
+  provider: ollama
+  model: qwen2.5-coder:7b
+  base_url: http://localhost:11434
+  timeout: 600
+  seed: 0
+agent:
+  max_iterations: 6
+  max_wall_seconds: 900
+  max_repairs: 2
+time_limits:
+  autogluon: 300
+  quick_autogluon: 60
+
+paths:
+  cache: data/openml
+  results: results/baselines.csv
+  mlflow: mlruns

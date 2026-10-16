@@ -1,0 +1,5 @@
+dataset,method,seed,test_auc,cv_auc,seconds,status,error
+credit-g,xgboost_default,0,0.825952380952381,0.7434151785714286,1.8540441000077408,completed,
+credit-g,autogluon,0,0.8439285714285715,,51.37389029999031,completed,
+credit-approval,xgboost_default,0,0.9586970406642538,0.9121093040071659,2.7635910999961197,completed,
+credit-approval,autogluon,0,0.9716840536512668,,47.01985889999196,completed,
