@@ -1,0 +1,34 @@
+@'
+.venv/
+**/.venv/
+__pycache__/
+*.py[cod]
+.env
+catboost_info/
+mlflow.db
+'@ | Set-Content .gitignore
+# Generated caches and databases
+tabagent/data/cache/
+tabagent/data/llm_cache/
+tabagent/data/openml/
+tabagent/data/llm_log.db
+tabagent/data/**/*.pkl
+tabagent/data/**/*.pq
+tabagent/data/**/*.pkl.py3
+tabagent/data/**/*.pkl
+tabagent/*.db
+tabagent/catboost_info/
+
+
+# Generated caches and databases
+tabagent/data/cache/
+tabagent/data/llm_cache/
+tabagent/data/openml/
+tabagent/data/llm_log.db
+tabagent/data/**/*.pkl
+tabagent/data/**/*.pq
+tabagent/data/**/*.pkl.py3
+tabagent/data/**/*.pkl
+tabagent/*.db
+tabagent/catboost_info/
+
