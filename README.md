@@ -104,6 +104,34 @@ The default database is `data/memory.db`; override it with `--memory-db`.
 Plain runs keep an empty memory context. Each trace records its mode, method,
 and the exact context used in its header.
 
+## Batch experiments
+
+Run the plain phase, build the memory pool, and then run the memory phase:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_batch.py --phase all
+```
+
+Use `--phase plain`, `--phase build`, or `--phase memory` to run an individual
+phase. Batch runs are sequential and resumable from the selected agent-results
+CSV. The build phase requires live plain traces for all 8 configured datasets
+and 3 seeds unless `--allow-partial` is supplied. A mock dry run can use
+separate outputs and the checked-in offline fixture traces:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_batch.py --phase all --mock-llm `
+  --datasets credit-g diabetes --seeds 0 --allow-partial `
+  --results-file results/mock/batch.csv `
+  --traces-dir results/mock/batch_traces `
+  --memory-db results/mock/batch_memory.db
+```
+
+Print aggregate metrics and save `results/summary.csv` with:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\summarize.py
+```
+
 ## Candidate execution harness
 
 Before candidate code is executed in the sandbox or final evaluator, the

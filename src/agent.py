@@ -477,6 +477,7 @@ def run_agent(
     mode: str = "live",
     method: str = "plain",
     memory_db: Path | None = None,
+    trace_dir: Path | None = None,
 ) -> dict[str, Any]:
     config = _load_config()
     agent_config = config["agent"]
@@ -490,8 +491,10 @@ def run_agent(
     if method not in {"plain", "memory"}:
         raise ValueError(f"Unsupported agent method: {method!r}.")
     client = client or LLMClient()
-    trace_root = PROJECT_ROOT / "results" / "mock" / "traces" if mode == "mock" else (
-        PROJECT_ROOT / "results" / "traces"
+    trace_root = trace_dir or (
+        PROJECT_ROOT / "results" / "mock" / "traces"
+        if mode == "mock"
+        else PROJECT_ROOT / "results" / "traces"
     )
     trace_path = trace_root / f"{dataset}_{method}_{seed}.jsonl"
     trace_path.parent.mkdir(parents=True, exist_ok=True)

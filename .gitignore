@@ -32,3 +32,6 @@ tabagent/data/**/*.pkl
 tabagent/*.db
 tabagent/catboost_info/
 
+
+results/mock/
+data/

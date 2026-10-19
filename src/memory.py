@@ -28,6 +28,14 @@ def _database_path(db_path: str | Path) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
+def _is_within(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve().relative_to(directory.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def _reject_mock_directory(traces_dir: Path) -> None:
     parts = tuple(part.lower() for part in traces_dir.resolve().parts)
     if any(
@@ -120,8 +128,20 @@ def build_memory(
     """Rebuild memory from live plain traces, optionally using supplied profiles."""
     directory = Path(traces_dir)
     trace_files = _trace_files(directory)
-    database = _database_path(db_path)
-    database.parent.mkdir(parents=True, exist_ok=True)
+    database = _database_path(db_path).resolve()
+    real_memory_database = (PROJECT_ROOT / "data" / "memory.db").resolve()
+    fixture_directory = (PROJECT_ROOT / "scripts" / "fixtures").resolve()
+    if (
+        database == real_memory_database
+        and trace_files
+        and (
+            _is_within(directory, fixture_directory)
+            or any(_is_within(trace_path, fixture_directory) for trace_path in trace_files)
+        )
+    ):
+        raise ValueError(
+            f"Refusing to build {real_memory_database} from scripts/fixtures traces."
+        )
 
     supplied_features: dict[str, list[float]] | None = None
     if meta_features_file is not None:
@@ -239,6 +259,7 @@ def build_memory(
                 )
             )
 
+    database.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(database)) as connection:
         with connection:
             connection.execute("DROP TABLE IF EXISTS memory")

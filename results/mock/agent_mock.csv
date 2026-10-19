@@ -1,2 +1,0 @@
-dataset,method,mode,seed,best_cv_auc,test_auc,iterations_used,llm_calls,prompt_tokens,completion_tokens,wall_seconds,compute_seconds,n_cached_calls,n_invalid,n_timeout,n_memory,n_error,n_failed_iterations,n_noop_candidates,n_memory_entries_used,memory_datasets_used,memory_context_chars,stop_reason,model
-credit-g,memory,mock,0,0.7593563988095238,0.8307142857142857,6,7,840,700,82.2503754000063,75.3732115001767,0,1,0,0,0,0,5,9,"[""fixture-beta"", ""fixture-alpha"", ""fixture-delta""]",1140,max_iterations,qwen2.5-coder:7b
