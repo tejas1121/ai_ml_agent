@@ -1,0 +1,5 @@
+{"type":"header","mode":"live","method":"plain","memory_context":""}
+{"iteration":0,"attempt":0,"hypothesis":"Fixed baseline.","code":"XGBClassifier()","status":"ok","cv_auc":0.630,"delta":null,"error":"","prompt_tokens":0,"completion_tokens":0,"llm_seconds":0.0,"sandbox_seconds":0.0,"best_so_far":0.630,"noop":false}
+{"iteration":1,"attempt":1,"hypothesis":"Try a random forest.","code":"RandomForestClassifier()","status":"ok","cv_auc":0.681,"delta":0.051,"error":"","prompt_tokens":10,"completion_tokens":10,"llm_seconds":0.1,"sandbox_seconds":0.2,"best_so_far":0.681,"noop":false}
+{"iteration":2,"attempt":2,"hypothesis":"Repeat the baseline score.","code":"RandomForestClassifier()","status":"ok","cv_auc":0.630,"delta":0.000,"error":"","prompt_tokens":10,"completion_tokens":10,"llm_seconds":0.1,"sandbox_seconds":0.2,"best_so_far":0.681,"noop":true}
+{"iteration":3,"attempt":3,"hypothesis":"Try a linear classifier.","code":"Perceptron()","status":"error","cv_auc":null,"delta":null,"error":"candidate error","prompt_tokens":10,"completion_tokens":0,"llm_seconds":0.1,"sandbox_seconds":0.0,"best_so_far":0.681,"noop":false}

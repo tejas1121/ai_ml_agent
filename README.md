@@ -1,8 +1,7 @@
 # TabAgent: Day 1 baselines
 
-Local foundation and non-LLM baselines for **Does Experiment Memory Help? A
-Budget-Matched Study of LLM Agents for Tabular AutoML**. This project does not
-include LLM, LangGraph, or experiment-memory code.
+Local foundation, baselines, and experiment agents for **Does Experiment Memory
+Help? A Budget-Matched Study of LLM Agents for Tabular AutoML**.
 
 ## Environment
 
@@ -80,6 +79,30 @@ use `OneHotEncoder(handle_unknown="ignore")` or
 `OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)`. Refer
 to columns by name, never integer position. Target encoding or labeling `y` is
 not needed. Candidates may use only the prompt's allowed imports.
+
+## Experiment memory
+
+Build the SQLite memory pool from explicitly marked live plain-agent traces:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_memory.py
+```
+
+The builder skips iteration-zero baselines and infrastructure-error attempts.
+It derives comparisons and compact model-change tags from training-only CV
+results; it never uses final held-out scores. Mock traces and memory-agent
+traces are not memory sources. Retrieval excludes all traces from the target
+dataset, regardless of seed.
+
+Run the memory method with the single-run interface:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_agent.py --dataset credit-g --seed 0 --method memory
+```
+
+The default database is `data/memory.db`; override it with `--memory-db`.
+Plain runs keep an empty memory context. Each trace records its mode, method,
+and the exact context used in its header.
 
 ## Candidate execution harness
 

@@ -17,7 +17,8 @@ from src.code_template import CODE_TEMPLATE, extract_code, validate_code
 from src.evaluate_final import final_test_auc
 from src.infra import is_infrastructure_error
 from src.llm import LLMClient, LLMResult
-from src.profiler import profile_dataset, profile_to_text
+from src.memory import format_memory_context, retrieve
+from src.profiler import meta_features, profile_dataset, profile_to_text
 from src.sandbox import SandboxResult, run_candidate
 from src.train_only import load_train_only
 from src.tracking import agent_run, log_agent_iteration
@@ -118,6 +119,9 @@ class AgentState:
     run_id: str = ""
     iterations_used: int = 0
     stop_reason: str = ""
+    memory_meta_features: list[float] = field(default_factory=list)
+    memory_entries: list[dict[str, Any]] = field(default_factory=list)
+    memory_context: str = ""
 
 
 class WorkflowState(TypedDict):
@@ -169,7 +173,9 @@ def _mark_iteration_failed(
 
 def profile(state: AgentState) -> None:
     X_train, y_train = load_train_only(state.dataset, state.seed)
-    state.profile_text = profile_to_text(profile_dataset(X_train, y_train))
+    profile_data = profile_dataset(X_train, y_train)
+    state.profile_text = profile_to_text(profile_data)
+    state.memory_meta_features = meta_features(profile_data)
 
 
 def propose(
@@ -469,6 +475,8 @@ def run_agent(
     client: LLMClient | None = None,
     results_file: Path | None = None,
     mode: str = "live",
+    method: str = "plain",
+    memory_db: Path | None = None,
 ) -> dict[str, Any]:
     config = _load_config()
     agent_config = config["agent"]
@@ -479,17 +487,28 @@ def run_agent(
     max_repairs = int(agent_config["max_repairs"])
     if mode not in {"mock", "live"}:
         raise ValueError(f"Unsupported agent mode: {mode!r}.")
+    if method not in {"plain", "memory"}:
+        raise ValueError(f"Unsupported agent method: {method!r}.")
     client = client or LLMClient()
     trace_root = PROJECT_ROOT / "results" / "mock" / "traces" if mode == "mock" else (
         PROJECT_ROOT / "results" / "traces"
     )
-    trace_path = trace_root / f"{dataset}_plain_{seed}.jsonl"
+    trace_path = trace_root / f"{dataset}_{method}_{seed}.jsonl"
     trace_path.parent.mkdir(parents=True, exist_ok=True)
-    trace_path.write_text("", encoding="utf-8")
+    trace_header = {
+        "type": "header",
+        "mode": mode,
+        "method": method,
+        "memory_context": "",
+    }
+    trace_path.write_text(
+        json.dumps(trace_header, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
     result_path = results_file or PROJECT_ROOT / "results" / (
         Path("mock") / "agent_results.csv" if mode == "mock" else Path("agent_results.csv")
     )
-    state = AgentState(dataset=dataset, seed=seed, method="plain")
+    state = AgentState(dataset=dataset, seed=seed, method=method)
     test_auc: float | None = None
     graph_values: dict[str, Any] = {
         "repairs_used": 0,
@@ -532,6 +551,24 @@ def run_agent(
                     state.stop_reason = "infra_error"
                     break
                 time.sleep(0.5)
+        if not state.stop_reason:
+            if state.method == "memory":
+                entries = retrieve(
+                    state.dataset,
+                    state.memory_meta_features,
+                    db_path=memory_db or PROJECT_ROOT / "data" / "memory.db",
+                )
+                state.memory_entries = entries
+                state.memory_context = format_memory_context(entries)
+            trace_header["memory_context"] = state.memory_context
+            trace_lines = trace_path.read_text(encoding="utf-8").splitlines()
+            trace_path.write_text(
+                json.dumps(trace_header, ensure_ascii=False)
+                + "\n"
+                + "\n".join(trace_lines[1:])
+                + ("\n" if len(trace_lines) > 1 else ""),
+                encoding="utf-8",
+            )
         return {}
 
     def baseline_node(_: WorkflowState) -> dict[str, Any]:
@@ -605,6 +642,7 @@ def run_agent(
                     base_seed=llm_seed,
                     repair_error=graph_values["repair_error"],
                     repair_code=graph_values["repair_code"],
+                    memory_context=state.memory_context,
                 )
                 graph_values["response"] = response
                 graph_values["hypothesis"] = hypothesis
@@ -820,7 +858,7 @@ def run_agent(
     workflow.add_conditional_edges("evaluate", after_evaluation)
     compiled_workflow = workflow.compile()
 
-    with agent_run(dataset, "plain", seed) as run_id:
+    with agent_run(dataset, method, seed) as run_id:
         state.run_id = run_id
         graph_values["repair_error"] = ""
         compiled_workflow.invoke({"context": state})
@@ -845,7 +883,7 @@ def run_agent(
     _print_table(state.history)
     result = {
         "dataset": dataset,
-        "method": "plain",
+        "method": method,
         "mode": mode,
         "seed": seed,
         "best_cv_auc": state.best_cv_auc,
@@ -863,6 +901,11 @@ def run_agent(
         "n_error": state.counters["n_error"],
         "n_failed_iterations": state.counters["n_failed_iterations"],
         "n_noop_candidates": state.counters["n_noop_candidates"],
+        "n_memory_entries_used": len(state.memory_entries),
+        "memory_datasets_used": list(
+            dict.fromkeys(entry["dataset"] for entry in state.memory_entries)
+        ),
+        "memory_context_chars": len(state.memory_context),
         "stop_reason": state.stop_reason,
         "model": model_name,
     }
@@ -905,6 +948,9 @@ def _append_result(path: Path, result: dict[str, Any]) -> None:
         "n_error",
         "n_failed_iterations",
         "n_noop_candidates",
+        "n_memory_entries_used",
+        "memory_datasets_used",
+        "memory_context_chars",
         "stop_reason",
         "model",
     )
@@ -923,14 +969,36 @@ def _append_result(path: Path, result: dict[str, Any]) -> None:
             row.setdefault("n_cached_calls", "")
             row.setdefault("n_failed_iterations", 0)
             row.setdefault("n_noop_candidates", 0)
+            row.setdefault("n_memory_entries_used", 0)
+            row.setdefault("memory_datasets_used", "[]")
+            row.setdefault("memory_context_chars", 0)
         existing_rows.append(result)
         with path.open("w", newline="", encoding="utf-8") as result_file:
             writer = csv.DictWriter(result_file, fieldnames=columns)
             writer.writeheader()
-            writer.writerows(existing_rows)
+            writer.writerows(
+                [
+                    {
+                        **row,
+                        "memory_datasets_used": (
+                            json.dumps(row["memory_datasets_used"])
+                            if isinstance(row.get("memory_datasets_used"), list)
+                            else row.get("memory_datasets_used", "[]")
+                        ),
+                    }
+                    for row in existing_rows
+                ]
+            )
     else:
         with path.open("a", newline="", encoding="utf-8") as result_file:
-            csv.DictWriter(result_file, fieldnames=columns).writerow(result)
+            csv.DictWriter(result_file, fieldnames=columns).writerow(
+                {
+                    **result,
+                    "memory_datasets_used": json.dumps(
+                        result["memory_datasets_used"]
+                    ),
+                }
+            )
 
 
 def run_is_finished(

@@ -101,10 +101,15 @@ def _resolve_results_path(value: str) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run one plain TabAgent experiment.")
+    parser = argparse.ArgumentParser(description="Run one TabAgent experiment.")
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--seed", required=True, type=int)
-    parser.add_argument("--method", choices=("plain",), default="plain")
+    parser.add_argument("--method", choices=("plain", "memory"), default="plain")
+    parser.add_argument(
+        "--memory-db",
+        default="data/memory.db",
+        help="SQLite experiment-memory database path, relative to the project root.",
+    )
     parser.add_argument(
         "--mock-llm",
         action="store_true",
@@ -153,6 +158,7 @@ def main() -> int:
         client = LLMClient(
             _provider=ScriptedMockProvider(),
             _cache_dir=Path(mock_cache_directory.name) / "cache",
+            _log_db_path=Path(mock_cache_directory.name) / "llm_log.db",
         )
 
     try:
@@ -162,6 +168,8 @@ def main() -> int:
             client=client,
             results_file=results_path,
             mode=mode,
+            method=args.method,
+            memory_db=_resolve_results_path(args.memory_db),
         )
     except RuntimeError as error:
         print(f"Agent run failed: {error}", file=sys.stderr)
