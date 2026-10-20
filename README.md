@@ -168,3 +168,115 @@ linear classifiers (`LogisticRegression`, `RidgeClassifier`, `SGDClassifier`,
 `LGBMClassifier`, and `CatBoostClassifier`. The same header is applied
 identically to every method. Static validation still checks only the model's
 original code and continues to reject imports outside the allowed-module list.
+
+## Frozen results and reproducibility
+
+### Frozen record (2026-10-20)
+
+These SHA-256 hashes identify the experiment inputs and frozen code record.
+`results/analysis/` is derived from the frozen results and traces; it is not
+frozen and can be regenerated with `scripts\summarize.py`.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `results/agent_results.csv` | `172079542E4B64B7F7BE58334E3E118774F4BE3339F2700BCD8EAAFBE105B6FC` |
+| `results/zoo_results.csv` | `2CF0CA3C88EBBE75C6B76DFF6192482224FA0C5E5AC9685B27678CCD92C0043F` |
+| `results/baselines.csv` | `284C5C411C0D1804D92918FA81E52C46BA01BBFCF2B2ADE12C99AD83FE625F0E` |
+| `data/memory.db` | `60E697B6881C66AC2CA8C1B044D591B148ABB495E4B67844BA5BC378F430EFCE` |
+| `src/agent.py` | `54D7F4C930B87F53572570FA6A7B797CE80D2FD6A516463DC34015EA7D702ABC` |
+| `src/code_template.py` | `9EF6D132BB23156DE116EE34D6EEC2D85444978C9A218CF8D9907139E83C2C3B` |
+| `src/sandbox.py` | `36C0B68FFD94188E0F92CB0FADC68DB392AE46833316FD0FDB005C1397E100BB` |
+| `src/memory.py` | `0F81ACF6B267DE90FB8F7C668E5EDBDB1C0AD2CBF487ECDCAD14BF252FE60863` |
+| `src/evaluate_final.py` | `D379E8E36ACF6809645C7BA0941019FF623B1E23CC100407C62C0BC3BB1195D2` |
+| `src/train_only.py` | `980FF6A9D51A254F443928F2A37165B3354C2E73FED0D5F1D3C37902476CF3EF` |
+
+The results were produced at commit
+`afdde397bc0add0e7224472b4f3997077a3c5cfc` (`zoo baseline and extended
+analysis`); this identifies the results-producing commit, not a new commit.
+
+### Setup
+
+The frozen run environment used Python 3.12 and AutoGluon Tabular 1.6.3.
+AutoGluon's configuration was `medium_quality`, with a 300-second time limit;
+the configured model set was tree-based only, excluding `NN_TORCH` and
+`FASTAI`. Although the per-run cap was 300 seconds, actual AutoGluon compute
+time was about 16 seconds median. The full pinned environment is recorded in
+`requirements.lock.txt`.
+
+### Experiment design
+
+- Datasets: the eight binary OpenML-CC18 datasets `credit-g`,
+  `credit-approval`, `diabetes`, `blood-transfusion-service-center`, `ilpd`,
+  `wdbc`, `kc1`, and `phoneme`.
+- Seeds: `0`, `1`, and `2`. The seed also determines the stratified 80/20
+  train/test split.
+- Candidate selection uses five-fold cross-validation on the training split
+  only. The held-out test split is used once per run for its final score, not
+  for candidate selection.
+- The agents use `qwen2.5-coder:7b` through local Ollama at temperature `0.2`,
+  with seeded calls.
+- Each agent run has a fixed iteration 0 followed by up to 6 proposal
+  iterations, up to 2 repairs per iteration, and a 900-second compute budget.
+- **plain** is the LLM agent without retrieved experiment memory.
+- **memory** is the same agent with a read-only pool built only from plain
+  traces. Retrieval is leave-one-dataset-out: traces from the target dataset
+  are excluded.
+- **zoo** is a no-LLM post-hoc control added after seeing the agent results.
+  It evaluates the fixed iteration-0 default and a fixed six-classifier sweep
+  (LightGBM, CatBoost, Logistic Regression, Random Forest, Gradient Boosting,
+  and Extra Trees), selects by training-only CV AUC, and tests the winner.
+
+### Execution harness notes
+
+The agent's shared prompt and candidate skeleton are frozen in `src/agent.py`;
+the shared code template is in `src/code_template.py`. Plain and memory runs
+use the same shared prompt text; only the optional `memory_context` differs.
+The candidate import header is shared by sandbox and final evaluation from
+`src/sandbox.py`. No-op detection marks a candidate when its normalized code
+repeats an earlier candidate or its CV AUC rounds to the incumbent's score at
+six decimal places. The repair prompt provides the previous error and code,
+asks for a targeted repair that preserves the same idea, and says not to
+replace the candidate with the default XGBoost pipeline.
+
+### Disclosures
+
+- `wdbc` seed 2 and `ilpd` seed 2 (memory) were truncated by a system sleep.
+  They were rerun with the same seeds after clearing the LLM cache; the
+  original runs are retained in `backup_before_rerun/`.
+- Plain `diabetes` seed 1 was affected by a stall: one LLM attempt took 873
+  seconds. It was retained because plain traces form the memory pool. The
+  sensitivity analysis in `results/analysis/summary.md` excludes it.
+- `compute_seconds` uses the original LLM seconds stored in the cache; a
+  repeated run reproduces the same text.
+
+### Reproduction commands
+
+From the project directory, run these in order to reproduce the experiment:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_baselines.py
+.\.venv\Scripts\python.exe scripts\run_batch.py --phase plain
+.\.venv\Scripts\python.exe scripts\run_batch.py --phase build
+.\.venv\Scripts\python.exe scripts\run_batch.py --phase memory
+.\.venv\Scripts\python.exe scripts\run_zoo.py
+.\.venv\Scripts\python.exe scripts\summarize.py
+```
+
+The project tests can be run with:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\test_memory.py
+.\.venv\Scripts\python.exe scripts\test_batch.py
+```
+
+Mock-only batch commands use `--mock-llm`; mock results, traces, and memory
+databases are isolated under `results/mock/` and are never written to the live
+experiment paths.
+
+### Known limitations
+
+- The study covers only eight small datasets and three seeds.
+- The seed changes both the model randomness and the train/test split.
+- The LLM results represent one quantized 7B model.
+- Reported p-values are uncorrected and should be treated as descriptive.
+- AutoGluon uses a `medium_quality`, tree-only configuration.

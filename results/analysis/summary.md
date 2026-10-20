@@ -149,10 +149,10 @@ Mean test AUC minus the selected run's best CV AUC. AutoGluon does not record a 
 
 For each live plain/memory attempt at iterations 1+, quality is candidate CV AUC minus that run's iteration-0 CV AUC. The final share uses all attempts as its denominator; the preceding share uses only successful, non-noop attempts with a recorded baseline.
 
-| method | all_llm_attempts | ok_non_noop_attempts_with_baseline | mean_cv_auc_delta_vs_iteration_0 | share_qualified_attempts_delta_gt_0_002 | share_all_attempts_ok_non_noop_delta_gt_0_002 |
-| --- | --- | --- | --- | --- | --- |
-| plain | 135 | 102 | 0.0056 | 0.5196 | 0.3926 |
-| memory | 143 | 127 | 0.0029 | 0.5276 | 0.4685 |
+| method | all_llm_attempts | ok_non_noop_attempts_with_baseline | mean_cv_auc_delta_vs_iteration_0 | share_qualified_attempts_delta_gt_0_002 | all_attempts_ok_non_noop_delta_gt_0_002 | share_all_attempts_ok_non_noop_delta_gt_0_002 |
+| --- | --- | --- | --- | --- | --- | --- |
+| plain | 180 | 102 | 0.0056 | 0.5196 | 53 | 0.2944 |
+| memory | 156 | 127 | 0.0029 | 0.5276 | 67 | 0.4295 |
 
 ## Classifier class at iteration 1
 

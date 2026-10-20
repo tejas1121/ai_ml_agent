@@ -885,12 +885,14 @@ def _attempt_quality(traces: list[dict[str, Any]]) -> pd.DataFrame:
         try:
             iteration = int(record.get("iteration", 0))
             seed = int(record["seed"])
-            cv_auc = float(record["cv_auc"])
         except (KeyError, TypeError, ValueError):
             continue
         key = (str(record["dataset"]), seed, method)
         if iteration == 0:
-            baseline_auc[key] = cv_auc
+            try:
+                baseline_auc[key] = float(record["cv_auc"])
+            except (KeyError, TypeError, ValueError):
+                continue
         elif iteration >= 1:
             attempts_by_method[method].append(record)
 
@@ -922,6 +924,7 @@ def _attempt_quality(traces: list[dict[str, Any]]) -> pd.DataFrame:
                 "share_qualified_attempts_delta_gt_0_002": (
                     improved / len(qualified) if qualified else np.nan
                 ),
+                "all_attempts_ok_non_noop_delta_gt_0_002": improved,
                 "share_all_attempts_ok_non_noop_delta_gt_0_002": (
                     improved / len(attempts) if attempts else np.nan
                 ),
