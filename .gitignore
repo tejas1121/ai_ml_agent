@@ -35,3 +35,6 @@ tabagent/catboost_info/
 
 results/mock/
 data/
+
+backup_plain/
+backup_before_rerun/llm_cache/
