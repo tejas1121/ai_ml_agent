@@ -65,6 +65,27 @@ The test AUC is final reporting only and is not used for fitting, cross-
 validation, or model selection. XGBoost's CV AUC is calculated with shuffled,
 stratified five-fold CV on the training split.
 
+## Fixed no-LLM zoo baseline
+
+Run the seven fixed candidates for the configured dataset/seed combinations:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_zoo.py
+```
+
+The runner selects candidates only by the same five-fold, training-only CV
+protocol used by the agents, then evaluates the winner on the held-out test
+split once. Results are resumable in `results/zoo_results.csv`; candidate
+traces are kept separately in `results/zoo_traces/` and are not used to build
+the experiment-memory pool. For a smoke run, override the dataset, seed, and
+output paths, for example:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_zoo.py --datasets credit-g --seeds 0 `
+  --results-file results/mock/zoo_smoke.csv `
+  --traces-dir results/mock/zoo_traces
+```
+
 ## Agent candidate structure
 
 Both the plain and memory-agent proposal prompts use the same function

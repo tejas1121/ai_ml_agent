@@ -56,13 +56,13 @@ class MemoryTests(unittest.TestCase):
 
     def test_fixture_meta_file_avoids_openml_dataset_loading(self) -> None:
         db_path = self.root / "meta-file-only.db"
-        with patch.object(memory, "_dataset_meta_features") as load_dataset:
+        with patch.object(memory, "_dataset_meta_features") as meta_feature_loader:
             memory.build_memory(
                 FIXTURE_TRACES,
                 db_path,
                 meta_features_file=FIXTURE_META_FILE,
             )
-        load_dataset.assert_not_called()
+        meta_feature_loader.assert_not_called()
 
     def test_builder_uses_attempts_after_baseline_and_ignores_infra(self) -> None:
         self.assertEqual(self.row_count, 24)
