@@ -38,3 +38,5 @@ data/
 
 backup_plain/
 backup_before_rerun/llm_cache/
+
+.venv-dash/
