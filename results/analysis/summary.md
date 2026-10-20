@@ -31,9 +31,23 @@ Difference is agent minus comparator. Dataset-level confidence intervals use 10,
 | agent | comparator | paired_dataset_seed_n | dataset_n | mean_difference_paired_dataset_seed | mean_difference_dataset_means | dataset_mean_bootstrap_95_ci | wilcoxon_dataset_statistic | wilcoxon_dataset_p | wilcoxon_pairs_statistic_non_independent | wilcoxon_pairs_p_non_independent | dataset_wins | dataset_ties | dataset_losses |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | plain | autogluon | 24 | 8 | 0.0012 | 0.0012 | [-0.005498, 0.008963] | 17.0000 | 0.945312 | 130.0000 | 0.583806 | 3 | 0 | 5 |
-| plain | xgboost_default | 24 | 8 | 0.0197 | 0.0197 | [0.006485, 0.034657] | 3.0000 | 0.0390625 | 29.0000 | 0.00154869 | 7 | 0 | 1 |
-| memory | autogluon | 24 | 8 | 0.0003 | 0.0003 | [-0.004797, 0.006564] | 16.0000 | 0.84375 | 147.0000 | 0.944107 | 3 | 0 | 5 |
-| memory | xgboost_default | 24 | 8 | 0.0188 | 0.0188 | [0.007125, 0.030577] | 3.0000 | 0.0390625 | 29.0000 | 0.00264242 | 7 | 0 | 1 |
+| plain | xgboost_default | 24 | 8 | 0.0197 | 0.0197 | [0.006133, 0.034692] | 3.0000 | 0.0390625 | 29.0000 | 0.00154869 | 7 | 0 | 1 |
+| memory | autogluon | 24 | 8 | 0.0003 | 0.0003 | [-0.004748, 0.006577] | 16.0000 | 0.84375 | 147.0000 | 0.944107 | 3 | 0 | 5 |
+| memory | xgboost_default | 24 | 8 | 0.0188 | 0.0188 | [0.006860, 0.030673] | 3.0000 | 0.0390625 | 29.0000 | 0.00264242 | 7 | 0 | 1 |
+
+## Sensitivity: exclude incomplete or early-stopped agent pairs
+
+This repeats memory minus plain using only complete dataset-seed pairs where both runs have `iterations_used >= 6` and `stop_reason == max_iterations`. Excluded complete pairs: 1.
+
+| analysis | agent | comparator | paired_dataset_seed_n | dataset_n | mean_difference_paired_dataset_seed | mean_difference_dataset_means | dataset_mean_bootstrap_95_ci | wilcoxon_dataset_statistic | wilcoxon_dataset_p | wilcoxon_pairs_statistic_non_independent | wilcoxon_pairs_p_non_independent | dataset_wins | dataset_ties | dataset_losses | excluded_complete_pairs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| both runs >=6 iterations and max_iterations | memory | plain | 23 | 8 | -0.0039 | -0.0042 | [-0.009603, 0.000003] | 5.0000 | 0.15625 | 60.0000 | 0.266769 | 2 | 1 | 5 | 1 |
+
+### Runs meeting an exclusion criterion
+
+| dataset | seed | method | iterations_used | stop_reason | exclusion_reason |
+| --- | --- | --- | --- | --- | --- |
+| diabetes | 1 | plain | 1 | max_wall_seconds | iterations_used < 6; stop_reason != max_iterations |
 
 ## Agent failure rates
 
@@ -52,9 +66,9 @@ Difference is agent minus comparator. Dataset-level confidence intervals use 10,
 
 ## Cost by method
 
-Baselines have zero prompt/completion tokens and LLM calls by definition; per-attempt LLM seconds are available only for agents.
+Baselines have zero prompt/completion tokens and LLM calls by definition; per-attempt LLM seconds are available only for agents. Mean and median compute seconds are adjacent columns.
 
-| method | runs | mean_compute_seconds | median_compute_seconds | mean_prompt_tokens | mean_completion_tokens | mean_llm_calls | median_per_attempt_llm_seconds | attempts_over_600_seconds | over_600_seconds_flag |
+| method | runs | compute_seconds_mean | compute_seconds_median | mean_prompt_tokens | mean_completion_tokens | mean_llm_calls | median_per_attempt_llm_seconds | attempts_over_600_seconds | over_600_seconds_flag |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | xgboost_default | 24 | 1.2618 | 1.4136 | 0.0000 | 0.0000 | 0.0000 | n/a | 0 | NO |
 | autogluon | 24 | 28.6346 | 15.9099 | 0.0000 | 0.0000 | 0.0000 | n/a | 0 | NO |

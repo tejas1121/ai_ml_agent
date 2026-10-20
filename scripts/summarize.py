@@ -239,6 +239,29 @@ def _full_iteration_sensitivity(
     agents: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame, int]:
     """Compare plain/memory only on complete pairs where both ran all iterations."""
+    required = {
+        "dataset",
+        "seed",
+        "method",
+        "test_auc",
+        "iterations_used",
+        "stop_reason",
+    }
+    if agents.empty or not required.issubset(agents.columns):
+        return (
+            pd.DataFrame(),
+            pd.DataFrame(
+                columns=[
+                    "dataset",
+                    "seed",
+                    "method",
+                    "iterations_used",
+                    "stop_reason",
+                    "exclusion_reason",
+                ]
+            ),
+            0,
+        )
     selected = agents.loc[
         agents["method"].isin(AGENT_METHODS),
         [
@@ -294,16 +317,20 @@ def _full_iteration_sensitivity(
         values="test_auc",
         aggfunc="mean",
     )
-    eligible_runs = selected.pivot_table(
-        index=["dataset", "seed"],
-        columns="method",
-        values="eligible",
-        aggfunc="all",
-    )
+    eligible_runs = selected.set_index(
+        ["dataset", "seed", "method"]
+    )["eligible"].unstack("method")
     if not set(AGENT_METHODS).issubset(paired_auc.columns) or not set(
         AGENT_METHODS
     ).issubset(eligible_runs.columns):
-        complete = pd.DataFrame(columns=list(AGENT_METHODS))
+        complete = pd.DataFrame(
+            columns=list(AGENT_METHODS),
+            index=pd.MultiIndex.from_arrays(
+                [[], []],
+                names=["dataset", "seed"],
+            ),
+            dtype=float,
+        )
         excluded_pair_count = 0
     else:
         paired_auc = paired_auc.dropna(subset=list(AGENT_METHODS))
@@ -311,6 +338,11 @@ def _full_iteration_sensitivity(
         keep = eligible_runs[list(AGENT_METHODS)].all(axis=1)
         excluded_pair_count = int((~keep).sum())
         complete = paired_auc.loc[keep, list(AGENT_METHODS)]
+    if complete.empty and not isinstance(complete.index, pd.MultiIndex):
+        complete.index = pd.MultiIndex.from_arrays(
+            [[], []],
+            names=["dataset", "seed"],
+        )
     comparison = pd.DataFrame(
         [_paired_comparison_row(complete, "memory", "plain")]
     )
@@ -498,10 +530,10 @@ def _cost_table(
         cost = {
             "method": method,
             "runs": len(runs),
-            "mean_compute_seconds": (
+            "compute_seconds_mean": (
                 runs["compute_seconds"].mean() if len(runs) else np.nan
             ),
-            "median_compute_seconds": (
+            "compute_seconds_median": (
                 runs["compute_seconds"].median() if len(runs) else np.nan
             ),
             "mean_prompt_tokens": (
@@ -614,12 +646,19 @@ def _build_report(
     curves: pd.DataFrame,
     trace_count: int,
     pairing_note: str,
+    sensitivity: pd.DataFrame,
+    excluded_runs: pd.DataFrame,
+    excluded_pair_count: int,
 ) -> str:
     ranks = mean_ranks.rename("mean_rank").rename_axis("method").reset_index()
     if not slow_attempts.empty:
         slow_text = _markdown_table(slow_attempts)
     else:
         slow_text = "No individual LLM attempt exceeded 600 seconds."
+    if excluded_runs.empty:
+        excluded_text = "No plain or memory runs met the exclusion criteria."
+    else:
+        excluded_text = _markdown_table(excluded_runs)
     return "\n\n".join(
         (
             "# Tabular agent experiment analysis",
@@ -642,6 +681,16 @@ def _build_report(
                 f"{pairing_note}"
             ),
             _markdown_table(comparisons),
+            "## Sensitivity: exclude incomplete or early-stopped agent pairs",
+            (
+                "This repeats memory minus plain using only complete dataset-seed "
+                "pairs where both runs have `iterations_used >= 6` and "
+                "`stop_reason == max_iterations`. "
+                f"Excluded complete pairs: {excluded_pair_count}."
+            ),
+            _markdown_table(sensitivity),
+            "### Runs meeting an exclusion criterion",
+            excluded_text,
             "## Agent failure rates",
             (
                 "`per_attempt_rate` divides category attempts by all LLM candidate "
@@ -654,7 +703,8 @@ def _build_report(
             "## Cost by method",
             (
                 "Baselines have zero prompt/completion tokens and LLM calls by "
-                "definition; per-attempt LLM seconds are available only for agents."
+                "definition; per-attempt LLM seconds are available only for agents. "
+                "Mean and median compute seconds are adjacent columns."
             ),
             _markdown_table(costs),
             "### Individual attempts over 600 seconds",
@@ -677,6 +727,9 @@ def main() -> int:
     per_dataset = _per_dataset_auc(combined)
     mean_ranks = _mean_ranks(per_dataset)
     comparisons = _paired_comparison_table(combined)
+    sensitivity, excluded_runs, excluded_pair_count = _full_iteration_sensitivity(
+        agents
+    )
     attempt_rates = _attempt_rates(agents, traces)
     costs, slow_attempts = _cost_table(combined, traces)
     curves = _curve_data(traces)
@@ -710,6 +763,9 @@ def main() -> int:
         curves,
         len(traces),
         pairing_note,
+        sensitivity,
+        excluded_runs,
+        excluded_pair_count,
     )
     report_path = OUTPUT_DIR / "summary.md"
     report_path.write_text(report, encoding="utf-8")
