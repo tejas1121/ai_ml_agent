@@ -1,7 +1,36 @@
-# TabAgent: Day 1 baselines
+# TabAgent: experiment code and frozen results
 
-Local foundation, baselines, and experiment agents for **Does Experiment Memory
-Help? A Budget-Matched Study of LLM Agents for Tabular AutoML**.
+This repository contains the plain and memory LLM agents, a no-LLM zoo, and
+conventional baselines for **Does Experiment Memory Help? A Budget-Matched
+Study of LLM Agents for Tabular AutoML**.
+
+## Results at a glance
+
+Mean held-out test AUC over 8 datasets × 3 seeds (see
+`results/analysis/summary.md` for every table, confidence interval and caveat):
+
+| Method | Mean rank (1 = best) | Median compute per run |
+| --- | --- | --- |
+| zoo (fixed six-classifier sweep, no LLM) | 1.7500 | 57.6284 s |
+| autogluon (medium quality, tree-only) | 2.5000 | 15.9099 s |
+| plain LLM agent | 2.9375 | 251.1376 s |
+| memory LLM agent | 3.1875 | 210.9568 s |
+| xgboost_default | 4.6250 | 1.4136 s |
+
+- Memory versus plain: mean test-AUC difference -0.0009 (95% bootstrap CI
+  [-0.007678, 0.005133]); no benefit detected on final accuracy.
+- Memory reduced code-error attempts from 0.2444 for plain to 0.0833 for
+  memory. Memory's CV lead over plain was 0.0156 at iteration 1 and 0.0021
+  at iteration 6.
+- The no-LLM zoo matched or exceeded both agents (memory minus zoo -0.0050,
+  95% CI [-0.007839, -0.002109]).
+- All methods beat default XGBoost: mean paired differences were 0.0197
+  (plain), 0.0188 (memory), 0.0238 (zoo), and 0.0053 (AutoGluon).
+- All of these results come from 8 small datasets, 3 seeds and one quantized
+  7B model, so treat them as descriptive. `results/analysis/summary.md`
+  contains all tables and caveats.
+
+Paper-writing handoff: see [HANDOFF.md](HANDOFF.md).
 
 ## Environment
 
@@ -11,9 +40,8 @@ Use the project virtual environment and install the dependencies:
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-AutoGluon may not install on every Windows/Python combination. The batch runner
-records a failed AutoGluon run and continues with the other runs; its error is
-stored in the results CSV for the selected mode.
+AutoGluon 1.6.3 installed and ran on Python 3.12 / Windows 11 for the frozen
+results.
 
 ## Dataset profiles
 
@@ -45,7 +73,8 @@ Full batch (8 datasets × 3 seeds × 2 methods; AutoGluon limit 300 seconds):
 ```
 
 Each completed or failed full run is appended to `results/baselines.csv`;
-quick-run results are kept separately in `results/baselines_quick.csv`.
+quick-run results are written to `results/baselines_quick.csv`; the archived
+smoke-test copy is in `results/dev_artifacts/baselines_quick.csv`.
 Existing `(dataset, method, seed)` rows in the selected results CSV are skipped
 on rerun. To retry a failed run, remove only its corresponding row from that
 CSV before rerunning. Runs are also logged to the local SQLite-backed MLflow
@@ -147,7 +176,8 @@ separate outputs and the checked-in offline fixture traces:
   --memory-db results/mock/batch_memory.db
 ```
 
-Print aggregate metrics and save `results/summary.csv` with:
+Generate the detailed report, tables and standard analysis figures under
+`results/analysis/` with:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\summarize.py
@@ -248,6 +278,10 @@ replace the candidate with the default XGBoost pipeline.
   sensitivity analysis in `results/analysis/summary.md` excludes it.
 - `compute_seconds` uses the original LLM seconds stored in the cache; a
   repeated run reproduces the same text.
+- The LLM cache (`data/llm_cache`) is git-ignored, so a fresh checkout
+  regenerates responses. Exact replication of the agent runs is not guaranteed
+  even with fixed seeds; the committed traces in `results/traces/` are the
+  record of what was run.
 
 ### Reproduction commands
 
