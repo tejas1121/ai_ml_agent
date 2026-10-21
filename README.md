@@ -314,3 +314,10 @@ experiment paths.
 - The LLM results represent one quantized 7B model.
 - Reported p-values are uncorrected and should be treated as descriptive.
 - AutoGluon uses a `medium_quality`, tree-only configuration.
+
+## Results dashboard
+
+Regenerate with `python scripts\build_dashboard.py`, then open
+`dashboard/index.html` to view it. Verify the embedded results with
+`python scripts\build_dashboard.py --check`. The dashboard is read-only and
+works offline.

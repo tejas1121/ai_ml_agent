@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TabAgent results</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--ink:#101828;--mut:#566074;--line:#d9dfe7;--plain:#1d4ed8;--mem:#b45309;--zoo:#0f766e;--base:#7a8394;--good:#0f766e;--bad:#b42318;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1319;--panel:#151c25;--ink:#e8edf3;--mut:#9aa6b8;--line:#2a3441;--plain:#7aa2ff;--mem:#f0a35a;--zoo:#4cc9b0;--base:#8b95a7;--good:#4cc9b0;--bad:#ff8a7a}}
+:root[data-theme="dark"]{--bg:#0e1319;--panel:#151c25;--ink:#e8edf3;--mut:#9aa6b8;--line:#2a3441;--plain:#7aa2ff;--mem:#f0a35a;--zoo:#4cc9b0;--base:#8b95a7;--good:#4cc9b0;--bad:#ff8a7a}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 56px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav div{max-width:1080px;margin:auto;padding:12px 20px;display:flex;gap:22px;align-items:center;overflow-x:auto;white-space:nowrap}
+nav b{font-family:Georgia,"Iowan Old Style",serif;font-size:18px;margin-right:auto}
+nav a{color:var(--mut);text-decoration:none;font-size:14px}nav a:hover,nav button:hover{color:var(--ink)}
+nav button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit;font-size:13px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--plain);outline-offset:2px}
+main{max-width:1080px;margin:auto;padding:0 20px 64px}
+h1,h2{font-family:Georgia,"Iowan Old Style",serif;font-weight:600;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.12;max-width:20ch;margin-top:48px}
+h2{font-size:26px;margin-top:64px}
+.lead{color:var(--mut);max-width:62ch;margin:14px 0 0}
+.sub{color:var(--mut);max-width:70ch;margin:6px 0 20px}
+.plate{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:20px;margin-top:20px;overflow-x:auto}
+.rank{margin-top:28px}
+.rank svg{width:100%;min-width:560px;height:auto;display:block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0;margin-top:28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.kpis div{padding:16px 20px 16px 0}
+.kpis strong{display:block;font:600 24px/1.2 Georgia,serif}
+.kpis span{color:var(--mut);font-size:14px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-variant-numeric:tabular-nums;font-size:14.5px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--mut);font-size:13px}
+td.best{font-weight:700}
+tr.foot td{font-weight:600;border-bottom:0}tr.foot:first-of-type td{border-top:2px solid var(--ink)}
+svg text{fill:var(--mut);font:12px system-ui,sans-serif}
+svg .gr{stroke:var(--line)}svg text.lb{fill:var(--ink);font-weight:600}
+.leg{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--mut);margin-bottom:8px}
+.leg i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.bars{display:grid;gap:18px}
+.row b{display:block;font-weight:600;font-size:15px}.row small{color:var(--mut)}
+.bar{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:14px;font-variant-numeric:tabular-nums}
+.bar u{display:block;height:14px;border-radius:2px;text-decoration:none}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:40px;margin-top:20px}
+.cols h3{font:600 17px Georgia,serif;margin:0 0 8px}
+ul{margin:0;padding-left:20px;color:var(--mut)}li{margin:6px 0}
+footer{margin-top:64px;padding-top:16px;border-top:1px solid var(--line);color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<nav><div><b>TabAgent</b><a href="#accuracy">Accuracy</a><a href="#progress">Progress</a><a href="#cost">Cost</a><a href="#reliability">Reliability</a><a href="#caveats">Caveats</a><button id="theme" type="button">Theme</button></div></nav>
+<main>
+<h1>A fixed model sweep matched both LLM agents.</h1>
+<p class="lead">Eight binary OpenML-CC18 datasets, three seeds, one local 7B model. Memory made the agent more reliable but did not raise final accuracy. All numbers are from the frozen results; test AUC is reported, never used for selection.</p>
+
+<div class="plate rank"><div class="leg" style="margin-bottom:0">Mean rank across datasets, 1 is best</div><div id="rank"></div></div>
+
+<div class="kpis">
+<div><strong>−0.0009</strong><span>Memory minus plain test AUC. 95% CI −0.0077 to +0.0051.</span></div>
+<div><strong>24.4% → 8.3%</strong><span>Candidate errors per attempt, plain versus memory.</span></div>
+<div><strong>+0.0156</strong><span>Memory’s CV lead after iteration 1. Down to +0.0021 by iteration 6.</span></div>
+<div><strong>58 s vs 251 s</strong><span>Median compute for the zoo versus the plain agent.</span></div>
+</div>
+
+<h2 id="accuracy">Test AUC by dataset</h2>
+<p class="sub">Mean over three seeds. Shading runs from the lowest to the highest method in each row; bold marks the best.</p>
+<div class="plate" id="heat"></div>
+
+<h2 id="progress">Progress within a run</h2>
+<p class="sub">Best cross-validation AUC so far, averaged over 24 dataset-seed runs. Memory leads early, and the gap has mostly closed by iteration 6.</p>
+<div class="plate"><div class="leg"><span><i style="background:var(--plain)"></i>LLM agent</span><span><i style="background:var(--mem)"></i>LLM agent + memory</span></div><div id="curve"></div></div>
+
+<h2 id="cost">Cost against accuracy</h2>
+<p class="sub">Median compute per run (log scale) against mean test AUC. Up and to the left is better.</p>
+<div class="plate"><div id="cost-chart"></div></div>
+
+<h2 id="reliability">Reliability</h2>
+<p class="sub">Shares of all LLM attempts after iteration 0: 180 for the plain agent, 156 for the memory agent.</p>
+<div class="plate"><div class="leg"><span><i style="background:var(--plain)"></i>LLM agent</span><span><i style="background:var(--mem)"></i>LLM agent + memory</span></div><div class="bars" id="bars"></div></div>
+
+<h2 id="caveats">What the results do not show</h2>
+<div class="cols">
+<div><h3>Read with care</h3><ul><li>Memory did not improve final accuracy; the interval includes zero.</li><li>The no-LLM zoo was added after seeing the agent results, so it is a post-hoc control.</li><li>P-values are uncorrected and descriptive.</li></ul></div>
+<div><h3>Scope</h3><ul><li>Eight small datasets and three seeds; the seed also changes the split.</li><li>One quantized 7B model.</li><li>AutoGluon ran medium quality, tree models only.</li><li>Structured versus free-text memory and shuffled memory were not run.</li></ul></div>
+</div>
+<footer>Source: results/analysis/summary.md. Frozen agent_results.csv SHA-256 starts 17207954 and ends B6FC. Two memory runs were rerun after a system sleep, and one plain run with a stalled attempt was kept; see the README.</footer>
+</main>
+<script>
+const C={xgb:"var(--base)",ag:"var(--base)",plain:"var(--plain)",mem:"var(--mem)",zoo:"var(--zoo)"};
+const M=[["xgb","Default XGBoost"],["ag","AutoGluon"],["plain","LLM agent"],["mem","LLM agent + memory"],["zoo","No-LLM zoo"]];
+const D=[["Blood transfusion",.7015,.7239,.7450,.7425,.7515],["Credit-approval",.9341,.9482,.9453,.9437,.9521],["Credit-g",.7928,.8010,.7935,.7935,.7942],["Diabetes",.7898,.8204,.8130,.8281,.8307],["ILPD",.7232,.7646,.7799,.7599,.7678],["KC1",.8113,.8339,.8378,.8361,.8348],["Phoneme",.9558,.9640,.9568,.9590,.9695],["WDBC",.9920,.9928,.9872,.9884,.9905]];
+const RK=[4.625,2.5,2.9375,3.1875,1.75],MED=[1.41,15.91,251.14,210.96,57.63];
+const $=s=>document.querySelector(s),mean=i=>D.reduce((s,r)=>s+r[i+1],0)/D.length;
+// rank strip
+(()=>{const W=900,H=190,l=40,r=40,X=v=>l+(v-1)/4*(W-l-r);let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mean rank by method">`;
+for(let t=1;t<=5;t++)s+=`<line class="gr" x1="${X(t)}" x2="${X(t)}" y1="30" y2="150"/><text x="${X(t)}" y="172" text-anchor="middle">${t}</text>`;
+const o=[4,1,2,3,0];o.forEach((i,k)=>{const y=44+k*24;s+=`<line class="gr" x1="${l}" x2="${W-r}" y1="${y}" y2="${y}"/><circle cx="${X(RK[i])}" cy="${y}" r="8" style="fill:${C[M[i][0]]}"/><text class="lb" x="${X(RK[i])+14}" y="${y+4}">${M[i][1]} ${RK[i].toFixed(2)}</text>`});
+$("#rank").innerHTML=s+"</svg>"})();
+// heat table
+(()=>{let h="<table><thead><tr><th>Dataset</th>"+M.map(m=>`<th>${m[1]}</th>`).join("")+"</tr></thead><tbody>";
+D.forEach(r=>{const v=r.slice(1),mn=Math.min(...v),mx=Math.max(...v);h+=`<tr><td>${r[0]}</td>`+v.map(x=>`<td${x==mx?' class="best"':""} style="background:color-mix(in srgb,var(--plain) ${Math.round((x-mn)/(mx-mn)*34)}%,transparent)">${x.toFixed(4)}</td>`).join("")+"</tr>"});
+h+='<tr class="foot"><td>Mean test AUC</td>'+M.map((_,i)=>`<td>${mean(i).toFixed(4)}</td>`).join("")+'</tr><tr class="foot"><td>Median compute (s)</td>'+MED.map(x=>`<td>${x.toFixed(1)}</td>`).join("")+"</tr></tbody></table>";$("#heat").innerHTML=h})();
+// shared axes
+const W=720,H=300,p={l:58,r:30,t:14,b:42};
+function grid(Y,yt,xt,X,xl){let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:520px;height:auto" role="img">`;
+yt.forEach(t=>s+=`<line class="gr" x1="${p.l}" x2="${W-p.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${p.l-8}" y="${Y(t)+4}" text-anchor="end">${t.toFixed(3)}</text>`);
+xt.forEach(t=>s+=`<text x="${X(t)}" y="${H-p.b+18}" text-anchor="middle">${t[1]??t}</text>`);
+return s+`<text x="${(W+p.l)/2}" y="${H-6}" text-anchor="middle">${xl}</text>`}
+// learning curves
+(()=>{const P=[.8176,.8186,.8283,.8342,.8380,.8440,.8449],Q=[.8176,.8342,.8414,.8425,.8458,.8460,.8469];
+const X=v=>p.l+v/6*(W-p.l-p.r),Y=v=>H-p.b-(v-.815)/(.85-.815)*(H-p.t-p.b);
+let s=grid(Y,[.815,.82,.825,.83,.835,.84,.845,.85],[0,1,2,3,4,5,6],X,"Iteration");
+[[P,"var(--plain)"],[Q,"var(--mem)"]].forEach(([a,c])=>{s+=`<polyline fill="none" stroke-width="2.5" style="stroke:${c}" points="${a.map((v,i)=>X(i)+","+Y(v)).join(" ")}"/>`+a.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="4" style="fill:${c}"><title>${v}</title></circle>`).join("")});
+$("#curve").innerHTML=s+"</svg>"})();
+// cost scatter
+(()=>{const lx=v=>Math.log10(v)/Math.log10(400),X=v=>p.l+lx(v)*(W-p.l-p.r),Y=v=>H-p.b-(v-.835)/(.865-.835)*(H-p.t-p.b);
+let s=grid(Y,[.835,.84,.845,.85,.855,.86,.865],[1,10,100],X,"Median compute per run, seconds (log scale)");
+M.forEach((m,i)=>{const x=X(MED[i]),y=Y(mean(i));s+=`<circle cx="${x}" cy="${y}" r="9" style="fill:${C[m[0]]}"/><text class="lb" x="${x+14}" y="${y+4}">${m[1]}</text>`});
+$("#cost-chart").innerHTML=s+"</svg>"})();
+// reliability bars
+(()=>{const R=[["Candidate errors","Attempts that failed to run",24.4,8.3],["No-op candidates","Attempts that repeated an earlier candidate or the incumbent score",18.3,10.3],["Useful attempts","Valid, not a no-op, and CV AUC up by more than 0.002",29.4,43.0]];
+$("#bars").innerHTML=R.map(r=>`<div class="row"><b>${r[0]}</b><small>${r[1]}</small><div class="bar"><u style="width:${r[2]*6}px;background:var(--plain)"></u>${r[2].toFixed(1)}%</div><div class="bar"><u style="width:${r[3]*6}px;background:var(--mem)"></u>${r[3].toFixed(1)}%</div></div>`).join("")})();
+$("#theme").onclick=()=>{const d=document.documentElement,dark=d.dataset.theme?d.dataset.theme=="dark":matchMedia("(prefers-color-scheme:dark)").matches;d.dataset.theme=dark?"light":"dark"};
+</script>
+</body>
+</html>
